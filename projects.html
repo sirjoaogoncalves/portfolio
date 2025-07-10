@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects - João Gonçalves</title>
+    <style>
+        body { font-family: monospace; margin: 0 auto; max-width: 700px; padding: 40px 20px; line-height: 1.6; background: #fff; }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 20px; font-weight: normal; }
+        h2 { font-size: 18px; margin-top: 40px; margin-bottom: 15px; font-weight: normal; }
+        .nav { text-align: center; margin-bottom: 50px; font-size: 16px; }
+        .nav a { margin: 0 10px; }
+        a { color: #0000ee; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        a:visited { color: #551a8b; }
+        p { margin: 15px 0; }
+        code { background: #f0f0f0; padding: 1px 3px; font-size: 13px; }
+        .tech { color: #000; font-weight: bold; }
+        .project-link { font-weight: bold; margin-bottom: 10px; }
+        hr { border: none; border-top: 1px solid #ccc; margin: 40px 0; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">home</a> |
+        <a href="about.html">about</a> |
+        <a target="_blank" href="https://github.com/sirjoaogoncalves">github</a>
+    </div>
+
+    <h2>CL Designer</h2>
+    <div class="project-link">
+        <a target="_blank" href="https://github.com/sirjoaogoncalves/nail-salon-website">github.com/sirjoaogoncalves/nail-salon-website</a>
+    </div>
+
+    <p>Modern responsive website built with <span class="tech">React</span> for a close friend's nail salon business. Complete digital presence with service booking, portfolio showcase, and customer engagement features.</p>
+
+    <p>Features comprehensive service catalog with pricing, interactive color palette with 60+ nail polish options, image gallery with categorized portfolios, contact forms, and mobile-first responsive design. Optimized for performance and SEO.</p>
+
+    <p>Built with <code>React 19</code>, <code>Vite</code> for build tooling, <code>Tailwind CSS</code> for styling, and <code>Framer Motion</code> for animations. Uses <code>Vercel</code> for deployment with automatic CI/CD integration.</p>
+
+    <p>Architecture: Component-based with reusable UI elements, custom hooks for state management, optimized image handling, and Progressive Web App capabilities. Includes analytics integration and performance monitoring.</p>
+
+    <p>Live at: <a target="_blank" href="https://cl-designer.vercel.app/">cl-designer.vercel.app</a> - Built to help a small business establish professional online presence and attract customers.</p>
+
+    <hr>
+
+    <h2>SimpleSDK</h2>
+    <div class="project-link">
+        <a target="_blank" href="https://github.com/sirjoaogoncalves/SimpleSDK">github.com/sirjoaogoncalves/SimpleSDK</a>
+    </div>
+
+    <p>C++ library providing TCP client/server functionality and SQLite database integration for RFID tag information processing. Designed to read, output, and store RFID tag data when scanned under antenna systems.</p>
+
+    <p>Features real-time RFID data capture with tag ID, antenna identification, timestamp recording, and RSSI (Received Signal Strength Indicator) measurements. Includes comprehensive database storage for inventory tracking and tag history management.</p>
+
+    <p>Built with <span class="tech">C++</span> using <code>Boost.Asio</code> for asynchronous networking, <code>SQLite3</code> for embedded database storage, and custom circular buffer implementation for efficient data processing. Cross-platform support for Linux, macOS, and Windows.</p>
+
+    <p>Architecture: Modular design with separate TCP client/server components, database abstraction layer, and circular buffer for data streaming. Supports multiple simultaneous antenna connections and concurrent RFID tag processing.</p>
+
+    <p>Usage: <code>./simple_sdk_example</code> - Starts TCP server on configurable port, processes incoming RFID data packets, and stores readings in SQLite database with automatic tag inventory management.</p>
+
+    <hr>
+
+    <h2>HomeNetHelper</h2>
+    <div class="project-link">
+        <a target="_blank" href="https://github.com/sirjoaogoncalves/homenethelper">github.com/sirjoaogoncalves/homenethelper</a>
+    </div>
+
+    <p>Network monitoring tool written in <span class="tech">Go</span> that provides real-time information about devices connected to your home network.</p>
+
+    <p>Captures and analyzes network traffic to give insights into device usage, connection types, and data transfer rates. Monitors multiple interfaces simultaneously (Ethernet and Wi-Fi) and identifies top protocols and ports used by each device.</p>
+
+    <p>Built with <code>github.com/google/gopacket</code> for packet capture and <code>libpcap</code> for low-level network access. Uses concurrent packet processing with goroutines and terminal UI with real-time statistics updates.</p>
+
+    <p>Usage: <code>sudo ./homenethelper -interfaces=eth0,wlan0 -refresh=5</code></p>
+
+    <p>Outputs table with device IP, hostname, connection type, interface, transfer speeds, and protocol/port usage statistics. Requires sudo privileges for packet capture.</p>
+
+    <hr>
+
+    <h2>Trading Terminal</h2>
+    <div class="project-link">
+        <a target="_blank" href="https://github.com/sirjoaogoncalves/trading_terminal">github.com/sirjoaogoncalves/trading_terminal</a>
+    </div>
+
+    <p>Terminal-based cryptocurrency trading dashboard built with <span class="tech">OCaml</span>.</p>
+
+    <p>Features real-time cryptocurrency price monitoring, interactive charts with multiple timeframes (1H/4H/1D/1W), market overview with multiple pairs, and keyboard-based navigation. Clean TUI designed for efficiency.</p>
+
+    <p>Built with <code>lwt</code> for asynchronous I/O, <code>notty</code> for terminal graphics, and <code>cohttp-lwt-unix</code> for HTTP requests. Integrates multiple cryptocurrency APIs (Binance, KuCoin, CoinGecko, CryptoCompare) with automatic failover.</p>
+
+    <p>Usage: <code>dune exec trading_terminal</code></p>
+
+    <p>Navigation: Tab to switch views, arrow keys for selection, number keys (1/4/d/w) for timeframes, 'r' to refresh, 'q' to quit. Supports major cryptocurrencies with real-time updates.</p>
+
+
+</body>
+</html>
