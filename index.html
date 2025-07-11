@@ -4,28 +4,141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>João Gonçalves</title>
-    <style>
-        body { font-family: monospace; margin: 0; padding: 20px; text-align: center; background: #fff; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        h1 { font-size: 28px; margin-bottom: 40px; font-weight: normal; }
-        .nav { font-size: 16px; }
-        .nav a { margin: 0 10px; }
-        a { color: #0000ee; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        a:visited { color: #551a8b; }
-        .footer { margin-top: 60px; font-size: 12px; color: #666; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <h1>João Gonçalves</h1>
+<body class="centered">
 
-    <div class="nav">
-        <a href="projects.html">projects</a> |
-        <a href="about.html">about</a> |
-        <a target="_blank" href="https://github.com/sirjoaogoncalves">github</a>
+    <div id="boot-sequence"></div>
+
+    <div id="terminal" style="display: none;">
+        <div class="terminal-output" id="terminal-output"></div>
+        <div class="prompt-line">
+            <span class="prompt">guest@portfolio:~$</span>
+            <input type="text" id="terminal-input" autocomplete="off" autofocus>
+        </div>
     </div>
 
-    <div class="footer">
-        software engineer
-    </div>
+    <script>
+        // --- DOM Elements ---
+        const bootSequenceContainer = document.getElementById('boot-sequence');
+        const terminalContainer = document.getElementById('terminal');
+        const terminalOutput = document.getElementById('terminal-output');
+        const terminalInput = document.getElementById('terminal-input');
+
+        // --- Boot Sequence ---
+        const bootMessages = [
+            'Booting system...',
+            'Connecting to network...',
+            'Loading modules...',
+            'Establishing secure connection...',
+            'Access Granted.',
+            ''
+        ];
+
+        let bootMessageIndex = 0;
+        function showBootMessage() {
+            if (bootMessageIndex < bootMessages.length) {
+                const p = document.createElement('p');
+                p.textContent = bootMessages[bootMessageIndex];
+                bootSequenceContainer.appendChild(p);
+                bootMessageIndex++;
+                setTimeout(showBootMessage, Math.random() * 200 + 50);
+            } else {
+                bootSequenceContainer.style.display = 'none';
+                terminalContainer.style.display = 'block';
+                terminalInput.focus();
+                printWelcomeMessage();
+            }
+        }
+
+        // --- Terminal Logic ---
+        const commandHistory = [];
+        let historyIndex = -1;
+
+        const commands = {
+            'help': 'Available commands: help, about, projects, github, whoami, date, clear, ls',
+            'about': () => { window.location.href = 'about.html'; return 'Navigating to about page...'; },
+            'projects': () => { window.location.href = 'projects.html'; return 'Navigating to projects page...'; },
+            'github': () => { window.open('https://github.com/sirjoaogoncalves', '_blank'); return 'Opening GitHub in a new tab...'; },
+            'whoami': 'guest',
+            'date': () => new Date().toUTCString(),
+            'ls': 'about.html  projects.html  github',
+            'clear': () => { terminalOutput.innerHTML = ''; return null; }
+        };
+
+        function printWelcomeMessage() {
+            const welcome = `Welcome to my portfolio.\nType 'help' for a list of available commands.`;
+            printToTerminal(welcome);
+        }
+
+        function printToTerminal(text) {
+            if (!text) return;
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                const p = document.createElement('p');
+                p.textContent = line;
+                terminalOutput.appendChild(p);
+            });
+            terminalContainer.scrollTop = terminalContainer.scrollHeight;
+        }
+
+        function processCommand(command) {
+            if (command) {
+                commandHistory.unshift(command);
+            }
+            historyIndex = -1;
+
+            const outputLine = document.createElement('p');
+            outputLine.innerHTML = `<span class="prompt">guest@portfolio:~$</span> ${command}`;
+            terminalOutput.appendChild(outputLine);
+
+            if (command in commands) {
+                const result = commands[command];
+                if (typeof result === 'function') {
+                    const funcResult = result();
+                    printToTerminal(funcResult);
+                } else {
+                    printToTerminal(result);
+                }
+            } else if (command.trim() !== '') {
+                printToTerminal(`command not found: ${command}`);
+            }
+
+            terminalContainer.scrollTop = terminalContainer.scrollHeight;
+        }
+
+        terminalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const command = terminalInput.value.trim();
+                processCommand(command);
+                terminalInput.value = '';
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    terminalInput.value = commandHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    terminalInput.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = -1;
+                    terminalInput.value = '';
+                }
+            }
+        });
+
+        // Focus input on any click within the terminal
+        terminalContainer.addEventListener('click', () => {
+            terminalInput.focus();
+        });
+
+        // --- Start ---
+        document.addEventListener('DOMContentLoaded', () => {
+            showBootMessage();
+        });
+    </script>
 </body>
 </html>
