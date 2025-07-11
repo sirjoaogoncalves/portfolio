@@ -6,11 +6,12 @@
     <title>João Gonçalves</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="centered">
+<body class="centered text-glitch">
 
     <div id="boot-sequence"></div>
 
     <div id="terminal" style="display: none;">
+        <canvas id="cmatrix-canvas"></canvas>
         <div class="terminal-output" id="terminal-output"></div>
         <div class="prompt-line">
             <span class="prompt">guest@portfolio:~$</span>
@@ -24,6 +25,8 @@
         const terminalContainer = document.getElementById('terminal');
         const terminalOutput = document.getElementById('terminal-output');
         const terminalInput = document.getElementById('terminal-input');
+        const cmatrixCanvas = document.getElementById('cmatrix-canvas');
+        const body = document.body;
 
         // --- Boot Sequence ---
         const bootMessages = [
@@ -54,35 +57,169 @@
         // --- Terminal Logic ---
         const commandHistory = [];
         let historyIndex = -1;
+        let hollywoodInterval = null;
+        let cmatrixInterval = null;
+        let isTyping = false;
 
         const commands = {
-            'help': 'Available commands: help, about, projects, github, whoami, date, clear, ls',
+            'help': 'Available commands: help, about, projects, github, whoami, date, clear, ls, cat, traceroute, hollywood, cmatrix, history, theme, neofetch, sudo, stop',
             'about': () => { window.location.href = 'about.html'; return 'Navigating to about page...'; },
             'projects': () => { window.location.href = 'projects.html'; return 'Navigating to projects page...'; },
             'github': () => { window.open('https://github.com/sirjoaogoncalves', '_blank'); return 'Opening GitHub in a new tab...'; },
             'whoami': 'guest',
             'date': () => new Date().toUTCString(),
             'ls': 'about.html  projects.html  github',
-            'clear': () => { terminalOutput.innerHTML = ''; return null; }
+            'history': () => commandHistory.slice(1).join('<br>'),
+            'clear': () => {
+                terminalOutput.innerHTML = '';
+                if (cmatrixInterval) stopCMatrix();
+                return null;
+            },
+            'cat': (args) => {
+                if (!args[0]) return 'Usage: cat &lt;file&gt;';
+                const files = {
+                    'about.html': 'A short bio could go here.',
+                    'projects.html': 'A list of projects could go here.',
+                    'github': 'Just a link, use the github command.'
+                };
+                return files[args[0]] || `cat: ${args[0]}: No such file or directory`;
+            },
+            'traceroute': (args) => {
+                const domain = args[0] || 'matrix.net';
+                typeToTerminal(`traceroute to ${domain} (127.0.0.1), 30 hops max, 60 byte packets`);
+                let hop = 1;
+                const maxHops = 10;
+                const interval = setInterval(() => {
+                    if (hop > maxHops) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    const ip = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+                    const time = (Math.random() * 50).toFixed(3);
+                    printToTerminal(` ${hop}  ${ip}  ${time} ms`);
+                    hop++;
+                }, 500);
+                return null;
+            },
+            'hollywood': () => {
+                if (hollywoodInterval) return 'Hollywood mode is already running.';
+                printToTerminal('Starting Hollywood mode... Type "stop" to exit.');
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+                hollywoodInterval = setInterval(() => {
+                    let line = '';
+                    for (let i = 0; i < Math.floor(Math.random() * 50) + 20; i++) {
+                        line += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    printToTerminal(line);
+                }, 100);
+                return null;
+            },
+            'cmatrix': () => {
+                if (cmatrixInterval) return 'CMatrix is already running.';
+                startCMatrix();
+                return 'Starting CMatrix... Type "stop" to exit.';
+            },
+            'theme': (args) => {
+                const themes = ['green', 'amber', 'blue'];
+                if (!args[0]) {
+                    return `Available themes: ${themes.join(', ')}. Usage: theme &lt;themename&gt;`;
+                }
+                const theme = args[0].toLowerCase();
+                if (themes.includes(theme)) {
+                    body.className = `centered text-glitch theme-${theme}`;
+                    return `Theme set to ${theme}.`;
+                }
+                return `Theme not found: ${theme}`;
+            },
+            'neofetch': () => {
+                const logo = `
+<pre>
+      ...
+     .d88b.
+    .d8""8b.
+   .d8'  '8b.
+  .d8'    '8b.
+ .d8'      '8b.
+.d8'________'8b.
+'88888888888888P'
+</pre>
+`;
+                const info = `
+<b>guest@portfolio</b>
+-----------------
+<b>OS:</b> Static HTML/CSS
+<b>Kernel:</b> VanillaJS
+<b>Shell:</b> PortfolioTerm v1.0
+<b>Resolution:</b> ${window.innerWidth}x${window.innerHeight}
+<b>Languages:</b> HTML, CSS, JS
+`;
+                return `${logo}<div style="display: inline-block; vertical-align: top;">${info}</div>`;
+            },
+            'sudo': () => {
+                return `User guest is not allowed to run sudo on this system. This incident will be reported.`;
+            },
+            'stop': () => {
+                let stopped = false;
+                if (hollywoodInterval) {
+                    clearInterval(hollywoodInterval);
+                    hollywoodInterval = null;
+                    printToTerminal('Hollywood mode stopped.');
+                    stopped = true;
+                }
+                if (cmatrixInterval) {
+                    stopCMatrix();
+                    printToTerminal('CMatrix mode stopped.');
+                    stopped = true;
+                }
+                return stopped ? null : 'No modes are currently running.';
+            }
         };
 
         function printWelcomeMessage() {
             const welcome = `Welcome to my portfolio.\nType 'help' for a list of available commands.`;
-            printToTerminal(welcome);
+            typeToTerminal(welcome);
         }
 
-        function printToTerminal(text) {
+        function typeToTerminal(text, callback) {
+            if (isTyping) return;
+            isTyping = true;
+            const p = document.createElement('p');
+            terminalOutput.appendChild(p);
+            let i = 0;
+            const interval = setInterval(() => {
+                p.textContent += text[i];
+                i++;
+                terminalContainer.scrollTop = terminalContainer.scrollHeight;
+                if (i >= text.length) {
+                    clearInterval(interval);
+                    isTyping = false;
+                    if (callback) callback();
+                }
+            }, 20);
+        }
+
+        function printToTerminal(text, isHTML = false) {
             if (!text) return;
-            const lines = text.split('\n');
-            lines.forEach(line => {
-                const p = document.createElement('p');
-                p.textContent = line;
-                terminalOutput.appendChild(p);
-            });
+            const p = document.createElement('p');
+            if (isHTML) {
+                p.innerHTML = text;
+            } else {
+                p.textContent = text;
+            }
+            terminalOutput.appendChild(p);
             terminalContainer.scrollTop = terminalContainer.scrollHeight;
         }
 
-        function processCommand(command) {
+        function handleSpecialCases(command) {
+            if (command.toLowerCase() === 'rm -rf /') {
+                typeToTerminal('Wow, trying to delete the entire universe, are we? Nice try, but this is a client-side simulation. 😉');
+                return true;
+            }
+            return false;
+        }
+
+        async function processCommand(command) {
+            if (isTyping) return;
             if (command) {
                 commandHistory.unshift(command);
             }
@@ -91,21 +228,86 @@
             const outputLine = document.createElement('p');
             outputLine.innerHTML = `<span class="prompt">guest@portfolio:~$</span> ${command}`;
             terminalOutput.appendChild(outputLine);
+            terminalContainer.scrollTop = terminalContainer.scrollHeight;
 
-            if (command in commands) {
-                const result = commands[command];
-                if (typeof result === 'function') {
-                    const funcResult = result();
-                    printToTerminal(funcResult);
-                } else {
-                    printToTerminal(result);
-                }
-            } else if (command.trim() !== '') {
-                printToTerminal(`command not found: ${command}`);
+
+            if (handleSpecialCases(command)) {
+                return;
             }
 
-            terminalContainer.scrollTop = terminalContainer.scrollHeight;
+            const parts = command.trim().split(' ');
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+
+            if (cmd in commands) {
+                const result = commands[cmd];
+                if (typeof result === 'function') {
+                    const funcResult = result(args);
+                    if (cmd === 'history' || cmd === 'neofetch') {
+                        printToTerminal(funcResult, true);
+                    } else if (funcResult) {
+                        typeToTerminal(funcResult);
+                    }
+                } else {
+                    typeToTerminal(result);
+                }
+            } else if (command.trim() !== '') {
+                typeToTerminal(`command not found: ${command}`);
+            }
         }
+
+        // --- CMatrix Logic ---
+        let ctx;
+        let drops = [];
+
+        function startCMatrix() {
+            cmatrixCanvas.style.display = 'block';
+            ctx = cmatrixCanvas.getContext('2d');
+            cmatrixCanvas.width = terminalContainer.offsetWidth;
+            cmatrixCanvas.height = terminalContainer.offsetHeight;
+
+            const fontSize = 16;
+            const columns = cmatrixCanvas.width / fontSize;
+            const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%+-/~{[|`]}";
+
+            drops = [];
+            for (let x = 0; x < columns; x++) {
+                drops[x] = 1;
+            }
+
+            function draw() {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+                ctx.fillRect(0, 0, cmatrixCanvas.width, cmatrixCanvas.height);
+
+                ctx.fillStyle = getComputedStyle(body).getPropertyValue('--foreground');
+                ctx.font = fontSize + "px monospace";
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                    if (drops[i] * fontSize > cmatrixCanvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+            cmatrixInterval = setInterval(draw, 33);
+        }
+
+        function stopCMatrix() {
+            clearInterval(cmatrixInterval);
+            cmatrixInterval = null;
+            cmatrixCanvas.style.display = 'none';
+        }
+
+        window.addEventListener('resize', () => {
+            if (cmatrixInterval) {
+                cmatrixCanvas.width = terminalContainer.offsetWidth;
+                cmatrixCanvas.height = terminalContainer.offsetHeight;
+            }
+        });
+
 
         terminalInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {

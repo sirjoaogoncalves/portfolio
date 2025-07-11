@@ -1,6 +1,12 @@
+:root {
+    --background: #000;
+    --foreground: #00ff41;
+    --shadow: #00ff41;
+}
+
 body {
-    background: #000;
-    color: #00ff41;
+    background: var(--background);
+    color: var(--foreground);
     font-family: monospace;
     margin: 0 auto;
     padding: 40px 20px;
@@ -10,7 +16,7 @@ body {
 
 h1, h2 {
     font-weight: normal;
-    text-shadow: 0 0 5px #00ff41;
+    text-shadow: 0 0 5px var(--shadow);
 }
 
 h1 {
@@ -26,13 +32,13 @@ h2 {
 }
 
 a {
-    color: #00ff41;
+    color: var(--foreground);
     text-decoration: none;
 }
 
 a:hover {
-    background: #00ff41;
-    color: #000;
+    background: var(--foreground);
+    color: var(--background);
 }
 
 .nav {
@@ -65,19 +71,19 @@ body.centered {
 /* Blinking cursor for typing effect */
 .cursor {
     display: inline-block;
-    background-color: #00ff41;
+    background-color: var(--foreground);
     margin-left: 5px;
     width: 10px;
     animation: blink 1s infinite;
-    box-shadow: 0 0 5px #00ff41;
+    box-shadow: 0 0 5px var(--shadow);
 }
 
 @keyframes blink {
-    0% { background-color: #00ff41; }
-    49% { background-color: #00ff41; }
+    0% { background-color: var(--foreground); }
+    49% { background-color: var(--foreground); }
     50% { background-color: transparent; }
     99% { background-color: transparent; }
-    100% { background-color: #00ff41; }
+    100% { background-color: var(--foreground); }
 }
 
 /* Project-specific styles */
@@ -118,6 +124,7 @@ hr {
 
 /* Terminal */
 #terminal {
+    position: relative;
     width: 100%;
     height: 100%;
     text-align: left;
@@ -139,6 +146,7 @@ hr {
 
 .prompt-line {
     display: flex;
+    align-items: center;
 }
 
 .prompt {
@@ -149,13 +157,90 @@ hr {
 #terminal-input {
     background: transparent;
     border: none;
-    color: #00ff41;
+    color: var(--foreground);
     font-family: monospace;
     font-size: 1em;
     width: 100%;
     padding: 0;
+    caret-color: var(--foreground);
 }
 
 #terminal-input:focus {
     outline: none;
+}
+
+
+/* --- Hacker Vibe Enhancements --- */
+
+body::after {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.2),
+        rgba(0, 0, 0, 0.2) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.text-glitch {
+    animation: glitch-animation 10s infinite alternate step-end;
+}
+
+@keyframes glitch-animation {
+    0%, 100% {
+        text-shadow: 0 0 5px var(--shadow);
+        color: var(--foreground);
+    }
+    50% {
+        text-shadow: 0.05em 0 0 rgba(0, 255, 65, 0.75),
+                     -0.05em -0.025em 0 rgba(255, 0, 0, 0.75),
+                     -0.025em 0.05em 0 rgba(0, 0, 255, 0.75);
+        color: #00ef41;
+    }
+    50.2% {
+        text-shadow: 0 0 5px var(--shadow);
+        color: var(--foreground);
+    }
+}
+
+#terminal .terminal-output pre {
+    font-family: monospace;
+    font-size: 1em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+#cmatrix-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    display: none;
+}
+
+/* --- Themes --- */
+.theme-amber {
+    --foreground: #ffb800;
+    --shadow: #ffb800;
+}
+
+.theme-blue {
+    --foreground: #00bfff;
+    --shadow: #00bfff;
+}
+
+.theme-green {
+    --foreground: #00ff41;
+    --shadow: #00ff41;
 }
