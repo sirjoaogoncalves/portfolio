@@ -6,13 +6,14 @@
     <title>João Gonçalves</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="centered text-glitch">
+<body class="centered text-glitch theme-green">
 
     <div id="boot-sequence"></div>
 
     <div id="terminal" style="display: none;">
         <canvas id="cmatrix-canvas"></canvas>
         <div class="terminal-output" id="terminal-output"></div>
+        <div id="suggestions" class="suggestions-container"></div>
         <div class="prompt-line">
             <span class="prompt">guest@portfolio:~$</span>
             <input type="text" id="terminal-input" autocomplete="off" autofocus>
@@ -26,6 +27,7 @@
         const terminalOutput = document.getElementById('terminal-output');
         const terminalInput = document.getElementById('terminal-input');
         const cmatrixCanvas = document.getElementById('cmatrix-canvas');
+        const suggestionsContainer = document.getElementById('suggestions');
         const body = document.body;
 
         // --- Boot Sequence ---
@@ -55,14 +57,19 @@
         }
 
         // --- Terminal Logic ---
-        const commandHistory = [];
+        const commandHistory = JSON.parse(localStorage.getItem('terminalHistory') || '[]');
         let historyIndex = -1;
         let hollywoodInterval = null;
         let cmatrixInterval = null;
         let isTyping = false;
+        let currentSuggestionIndex = -1;
+        let currentSuggestions = [];
+        let aliases = JSON.parse(localStorage.getItem('terminalAliases') || '{}');
+        let environment = JSON.parse(localStorage.getItem('terminalEnv') || '{}');
+        let isProcessRunning = false;
 
         const commands = {
-            'help': 'Available commands: help, about, projects, github, whoami, date, clear, ls, cat, traceroute, hollywood, cmatrix, history, theme, neofetch, sudo, stop',
+            'help': 'Available commands: help, about, projects, github, whoami, date, clear, ls, cat, traceroute, hollywood, cmatrix, history, neofetch, sudo, stop, ps, top, ping, locate, grep, systemctl, df, free, lscpu, alias, export, man, which, netstat, ss, curl, wget, uptime, sound',
             'about': () => { window.location.href = 'about.html'; return 'Navigating to about page...'; },
             'projects': () => { window.location.href = 'projects.html'; return 'Navigating to projects page...'; },
             'github': () => { window.open('https://github.com/sirjoaogoncalves', '_blank'); return 'Opening GitHub in a new tab...'; },
@@ -73,14 +80,16 @@
             'clear': () => {
                 terminalOutput.innerHTML = '';
                 if (cmatrixInterval) stopCMatrix();
+                hideSuggestions();
                 return null;
             },
             'cat': (args) => {
                 if (!args[0]) return 'Usage: cat &lt;file&gt;';
                 const files = {
-                    'about.html': 'A short bio could go here.',
-                    'projects.html': 'A list of projects could go here.',
-                    'github': 'Just a link, use the github command.'
+                    'about.html': 'Software Developer at ARPMIND. Portuguese Armed Forces veteran. Building systems, terminals, and web applications.',
+                    'projects.html': 'CL Designer (React), SimpleSDK (C++), HomeNetHelper (Go), Trading Terminal (OCaml)',
+                    'github': 'Just a link, use the github command.',
+                    'README.md': 'João Gonçalves - Software Developer Portfolio\n\nTerminal-based portfolio showcasing projects in multiple languages.\nBuilt with vanilla HTML/CSS/JS for optimal performance.'
                 };
                 return files[args[0]] || `cat: ${args[0]}: No such file or directory`;
             },
@@ -119,18 +128,6 @@
                 startCMatrix();
                 return 'Starting CMatrix... Type "stop" to exit.';
             },
-            'theme': (args) => {
-                const themes = ['green', 'amber', 'blue'];
-                if (!args[0]) {
-                    return `Available themes: ${themes.join(', ')}. Usage: theme &lt;themename&gt;`;
-                }
-                const theme = args[0].toLowerCase();
-                if (themes.includes(theme)) {
-                    body.className = `centered text-glitch theme-${theme}`;
-                    return `Theme set to ${theme}.`;
-                }
-                return `Theme not found: ${theme}`;
-            },
             'neofetch': () => {
                 const logo = `
 <pre>
@@ -148,10 +145,11 @@
 <b>guest@portfolio</b>
 -----------------
 <b>OS:</b> Static HTML/CSS
-<b>Kernel:</b> VanillaJS
-<b>Shell:</b> PortfolioTerm v1.0
+<b>Kernel:</b> VanillaJS v2.0
+<b>Shell:</b> PortfolioTerm v2.0
 <b>Resolution:</b> ${window.innerWidth}x${window.innerHeight}
-<b>Languages:</b> HTML, CSS, JS
+<b>Languages:</b> HTML, CSS, JS, C++, Go, OCaml, React
+<b>Uptime:</b> ${Math.floor((Date.now() - performance.timeOrigin) / 1000)}s
 `;
                 return `${logo}<div style="display: inline-block; vertical-align: top;">${info}</div>`;
             },
@@ -171,13 +169,280 @@
                     printToTerminal('CMatrix mode stopped.');
                     stopped = true;
                 }
+                isProcessRunning = false;
                 return stopped ? null : 'No modes are currently running.';
+            },
+            'ps': () => {
+                const processes = [
+                    'PID    COMMAND                     STATUS',
+                    '----   -------                     ------',
+                    '1      portfolio-terminal          running',
+                    '2      cl-designer.vercel.app      online',
+                    '3      github.com/sirjoaogoncalves active',
+                    '4      homenethelper               idle',
+                    '5      trading-terminal            idle',
+                    '6      simpleSDK                   idle'
+                ];
+                return processes.join('\n');
+            },
+            'top': () => {
+                const stats = [
+                    'Tasks: 6 total, 2 running, 4 sleeping',
+                    'Load average: 0.42, 0.31, 0.28',
+                    '',
+                    'PID    %CPU   %MEM   COMMAND',
+                    '----   ----   ----   -------',
+                    '1      15.3   12.1   portfolio-terminal',
+                    '2      8.7    5.2    cl-designer',
+                    '3      3.1    2.8    github-integration',
+                    '4      0.0    1.2    homenethelper',
+                    '5      0.0    0.8    trading-terminal',
+                    '6      0.0    0.5    simpleSDK'
+                ];
+                return stats.join('\n');
+            },
+            'ping': (args) => {
+                const host = args[0] || 'portfolio.local';
+                const responses = [
+                    `PING ${host} (127.0.0.1): 56 data bytes`,
+                    `64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.042ms`,
+                    `64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.038ms`,
+                    `64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.041ms`,
+                    ``,
+                    `--- ${host} ping statistics ---`,
+                    `3 packets transmitted, 3 received, 0% packet loss`
+                ];
+                return responses.join('\n');
+            },
+            'locate': (args) => {
+                if (!args[0]) return 'Usage: locate &lt;pattern&gt;';
+                const pattern = args[0].toLowerCase();
+                const results = [];
+                if (pattern.includes('react')) results.push('/projects/cl-designer');
+                if (pattern.includes('go')) results.push('/projects/homenethelper');
+                if (pattern.includes('ocaml')) results.push('/projects/trading-terminal');
+                if (pattern.includes('c++')) results.push('/projects/simpleSDK');
+                if (pattern.includes('portfolio')) results.push('/about.html', '/projects.html');
+                if (pattern.includes('github')) results.push('/dev/github');
+                return results.length ? results.join('\n') : `locate: no entries found for '${pattern}'`;
+            },
+            'grep': (args) => {
+                if (args.length < 2) return 'Usage: grep &lt;pattern&gt; &lt;source&gt;';
+                const pattern = args[0].toLowerCase();
+                const source = args[1];
+                if (source === 'history') {
+                    const matches = commandHistory.filter(cmd => cmd.toLowerCase().includes(pattern));
+                    return matches.length ? matches.join('\n') : `grep: no matches found for '${pattern}'`;
+                }
+                if (source === 'projects') {
+                    const projects = ['CL Designer (React)', 'SimpleSDK (C++)', 'HomeNetHelper (Go)', 'Trading Terminal (OCaml)'];
+                    const matches = projects.filter(p => p.toLowerCase().includes(pattern));
+                    return matches.length ? matches.join('\n') : `grep: no matches found for '${pattern}'`;
+                }
+                return `grep: cannot access '${source}': No such file or directory`;
+            },
+            'systemctl': (args) => {
+                if (!args[0]) return 'Usage: systemctl &lt;action&gt; [service]';
+                const action = args[0];
+                const service = args[1] || 'portfolio';
+                if (action === 'status') {
+                    const services = {
+                        'portfolio': '● portfolio.service - Portfolio Terminal\n   Loaded: loaded\n   Active: active (running)',
+                        'cl-designer': '● cl-designer.service - CL Designer Website\n   Loaded: loaded\n   Active: active (running)',
+                        'github': '● github.service - GitHub Integration\n   Loaded: loaded\n   Active: active (running)'
+                    };
+                    return services[service] || `Unit ${service}.service could not be found.`;
+                }
+                return `systemctl: unknown action '${action}'`;
+            },
+            'df': () => {
+                const usage = [
+                    'Filesystem     Size  Used Avail Use% Mounted on',
+                    '/dev/portfolio  10G  3.2G  6.8G  32% /',
+                    '/dev/projects   5G   2.1G  2.9G  42% /projects',
+                    '/dev/github     ∞    4.2G   ∞    0% /github'
+                ];
+                return usage.join('\n');
+            },
+            'free': () => {
+                const memory = [
+                    '              total        used        free      shared  buff/cache   available',
+                    'Mem:           8192        3021        4123         512        1048        4659',
+                    'Swap:          2048           0        2048'
+                ];
+                return memory.join('\n');
+            },
+            'lscpu': () => {
+                const cpu = [
+                    'Architecture:        x86_64',
+                    'CPU op-mode(s):      32-bit, 64-bit',
+                    'CPU(s):              JavaScript Engine',
+                    'Thread(s) per core:  Event Loop',
+                    'Core(s) per socket:  Single Threaded',
+                    'Socket(s):           1',
+                    'Vendor ID:           BrowserEngine',
+                    'Model name:          V8/SpiderMonkey/WebKit'
+                ];
+                return cpu.join('\n');
+            },
+            'alias': (args) => {
+                if (!args[0]) {
+                    const aliasList = Object.keys(aliases).map(key => `${key}='${aliases[key]}'`);
+                    return aliasList.length ? aliasList.join('\n') : 'No aliases defined.';
+                }
+                if (args.length === 1) {
+                    return aliases[args[0]] ? `${args[0]}='${aliases[args[0]]}'` : `alias: ${args[0]}: not found`;
+                }
+                if (args[1] && args[1].includes('=')) {
+                    const [key, value] = args[1].split('=');
+                    aliases[key] = value.replace(/'/g, '');
+                    localStorage.setItem('terminalAliases', JSON.stringify(aliases));
+                    return `Alias created: ${key}='${aliases[key]}'`;
+                }
+                return 'Usage: alias [name[=value]]';
+            },
+            'export': (args) => {
+                if (!args[0]) {
+                    const envList = Object.keys(environment).map(key => `${key}=${environment[key]}`);
+                    return envList.join('\n');
+                }
+                if (args[0].includes('=')) {
+                    const [key, value] = args[0].split('=');
+                    environment[key] = value;
+                    localStorage.setItem('terminalEnv', JSON.stringify(environment));
+                    return `Environment variable set: ${key}=${value}`;
+                }
+                return environment[args[0]] ? `${args[0]}=${environment[args[0]]}` : `export: ${args[0]}: not found`;
+            },
+            'man': (args) => {
+                if (!args[0]) return 'Usage: man &lt;command&gt;';
+                const manPages = {
+                    'ls': 'ls - list directory contents\nSYNOPSIS: ls\nDESCRIPTION: Lists available files and directories in portfolio.',
+                    'cat': 'cat - display file contents\nSYNOPSIS: cat [file]\nDESCRIPTION: Display contents of portfolio files.',
+                    'ps': 'ps - display running processes\nSYNOPSIS: ps\nDESCRIPTION: Show portfolio projects and their status.',
+                    'ping': 'ping - test network connectivity\nSYNOPSIS: ping [host]\nDESCRIPTION: Test connectivity to portfolio services.'
+                };
+                return manPages[args[0]] || `No manual entry for ${args[0]}`;
+            },
+            'which': (args) => {
+                if (!args[0]) return 'Usage: which &lt;command&gt;';
+                const cmd = args[0];
+                if (commands[cmd]) {
+                    return `/usr/bin/${cmd}`;
+                }
+                if (aliases[cmd]) {
+                    return `${cmd}: aliased to ${aliases[cmd]}`;
+                }
+                return `which: no ${cmd} in (/usr/bin:/bin:/usr/local/bin)`;
+            },
+            'netstat': () => {
+                const connections = [
+                    'Active Internet connections',
+                    'Proto Recv-Q Send-Q Local Address           Foreign Address         State',
+                    'tcp        0      0 127.0.0.1:3000          0.0.0.0:*               LISTEN',
+                    'tcp        0      0 127.0.0.1:8080          0.0.0.0:*               LISTEN',
+                    'tcp        0      0 portfolio.local:443     github.com:443          ESTABLISHED',
+                    'tcp        0      0 portfolio.local:80      vercel.app:80           ESTABLISHED'
+                ];
+                return connections.join('\n');
+            },
+            'ss': () => {
+                const sockets = [
+                    'Netid  State      Local Address:Port                 Peer Address:Port',
+                    'tcp    LISTEN     127.0.0.1:3000                    *:*',
+                    'tcp    LISTEN     127.0.0.1:8080                    *:*',
+                    'tcp    ESTAB      portfolio.local:443               github.com:443',
+                    'tcp    ESTAB      portfolio.local:80                vercel.app:80'
+                ];
+                return sockets.join('\n');
+            },
+            'curl': (args) => {
+                if (!args[0]) return 'Usage: curl &lt;url&gt;';
+                const url = args[0];
+                const responses = {
+                    'portfolio.local': '{"status": "online", "projects": 4, "uptime": "99.9%"}',
+                    'github.com/sirjoaogoncalves': '{"user": "sirjoaogoncalves", "public_repos": 15, "followers": 42}',
+                    'cl-designer.vercel.app': '{"status": "deployed", "build": "success", "performance": "A+"}',
+                    'api.github.com': '{"rate_limit": {"limit": 5000, "remaining": 4999}}'
+                };
+                return responses[url] || `curl: (6) Could not resolve host: ${url}`;
+            },
+            'wget': (args) => {
+                if (!args[0]) return 'Usage: wget &lt;url&gt;';
+                const url = args[0];
+                const filename = url.split('/').pop() || 'index.html';
+                return `--${new Date().toISOString().slice(0, 19)} ${url}\nResolving portfolio.local... 127.0.0.1\nConnecting to portfolio.local|127.0.0.1|:80... connected.\nHTTP request sent, awaiting response... 200 OK\nLength: 2048 (2.0K) [text/html]\nSaving to: '${filename}'\n\n${filename}                    100%[===================>]   2.00K  --.-KB/s    in 0s\n\n${new Date().toISOString().slice(0, 19)} (12.5 MB/s) - '${filename}' saved [2048/2048]`;
+            },
+            'uptime': () => {
+                const uptime = Math.floor((Date.now() - performance.timeOrigin) / 1000);
+                const hours = Math.floor(uptime / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                const seconds = uptime % 60;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} up ${hours}h ${minutes}m, 1 user, load average: 0.42, 0.31, 0.28`;
+            },
+            'sound': () => {
+                soundEnabled = !soundEnabled;
+                environment.SOUND = soundEnabled;
+                localStorage.setItem('terminalEnv', JSON.stringify(environment));
+                return `Keyboard sounds ${soundEnabled ? 'enabled' : 'disabled'}.`;
             }
         };
 
         function printWelcomeMessage() {
             const welcome = `Welcome to my portfolio.\nType 'help' for a list of available commands.`;
             typeToTerminal(welcome);
+            
+            if (environment.SOUND !== undefined) {
+                soundEnabled = environment.SOUND;
+            }
+        }
+
+        function getSuggestions(input) {
+            const commandNames = Object.keys(commands);
+            const aliasNames = Object.keys(aliases);
+            const allCommands = [...commandNames, ...aliasNames];
+            
+            return allCommands.filter(cmd => cmd.toLowerCase().startsWith(input.toLowerCase()));
+        }
+
+        function showSuggestions(suggestions) {
+            hideSuggestions();
+            if (suggestions.length === 0) return;
+            
+            currentSuggestions = suggestions;
+            currentSuggestionIndex = -1;
+            
+            suggestions.forEach((suggestion, index) => {
+                const suggestionElement = document.createElement('div');
+                suggestionElement.className = 'suggestion';
+                suggestionElement.textContent = suggestion;
+                suggestionElement.addEventListener('click', () => {
+                    terminalInput.value = suggestion;
+                    hideSuggestions();
+                    terminalInput.focus();
+                });
+                suggestionsContainer.appendChild(suggestionElement);
+            });
+            
+            suggestionsContainer.style.display = 'block';
+        }
+
+        function hideSuggestions() {
+            suggestionsContainer.style.display = 'none';
+            suggestionsContainer.innerHTML = '';
+            currentSuggestions = [];
+            currentSuggestionIndex = -1;
+        }
+
+        function selectSuggestion(index) {
+            const suggestions = suggestionsContainer.querySelectorAll('.suggestion');
+            suggestions.forEach((s, i) => {
+                s.classList.toggle('selected', i === index);
+            });
+        }
+
+        function saveSession() {
+            localStorage.setItem('terminalHistory', JSON.stringify(commandHistory.slice(0, 100)));
         }
 
         function typeToTerminal(text, callback) {
@@ -220,8 +485,11 @@
 
         async function processCommand(command) {
             if (isTyping) return;
+            hideSuggestions();
+            
             if (command) {
                 commandHistory.unshift(command);
+                saveSession();
             }
             historyIndex = -1;
 
@@ -230,20 +498,23 @@
             terminalOutput.appendChild(outputLine);
             terminalContainer.scrollTop = terminalContainer.scrollHeight;
 
-
             if (handleSpecialCases(command)) {
                 return;
             }
 
             const parts = command.trim().split(' ');
-            const cmd = parts[0].toLowerCase();
+            let cmd = parts[0].toLowerCase();
             const args = parts.slice(1);
+
+            if (aliases[cmd]) {
+                cmd = aliases[cmd];
+            }
 
             if (cmd in commands) {
                 const result = commands[cmd];
                 if (typeof result === 'function') {
                     const funcResult = result(args);
-                    if (cmd === 'history' || cmd === 'neofetch') {
+                    if (cmd === 'history' || cmd === 'neofetch' || cmd === 'ps' || cmd === 'top' || cmd === 'ping' || cmd === 'df' || cmd === 'free' || cmd === 'lscpu' || cmd === 'netstat' || cmd === 'ss' || cmd === 'wget' || cmd === 'curl' || cmd === 'man' || cmd === 'locate' || cmd === 'grep' || cmd === 'systemctl' || cmd === 'uptime') {
                         printToTerminal(funcResult, true);
                     } else if (funcResult) {
                         typeToTerminal(funcResult);
@@ -311,30 +582,129 @@
 
         terminalInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                if (currentSuggestions.length > 0 && currentSuggestionIndex >= 0) {
+                    terminalInput.value = currentSuggestions[currentSuggestionIndex];
+                    hideSuggestions();
+                    return;
+                }
                 const command = terminalInput.value.trim();
                 processCommand(command);
                 terminalInput.value = '';
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                const input = terminalInput.value.trim();
+                if (input) {
+                    const suggestions = getSuggestions(input);
+                    if (suggestions.length === 1) {
+                        terminalInput.value = suggestions[0];
+                        hideSuggestions();
+                    } else if (suggestions.length > 1) {
+                        showSuggestions(suggestions);
+                    }
+                }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                if (historyIndex < commandHistory.length - 1) {
+                if (currentSuggestions.length > 0) {
+                    currentSuggestionIndex = Math.max(0, currentSuggestionIndex - 1);
+                    selectSuggestion(currentSuggestionIndex);
+                } else if (historyIndex < commandHistory.length - 1) {
                     historyIndex++;
                     terminalInput.value = commandHistory[historyIndex];
                 }
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                if (historyIndex > 0) {
+                if (currentSuggestions.length > 0) {
+                    currentSuggestionIndex = Math.min(currentSuggestions.length - 1, currentSuggestionIndex + 1);
+                    selectSuggestion(currentSuggestionIndex);
+                } else if (historyIndex > 0) {
                     historyIndex--;
                     terminalInput.value = commandHistory[historyIndex];
                 } else {
                     historyIndex = -1;
                     terminalInput.value = '';
                 }
+            } else if (e.key === 'Escape') {
+                hideSuggestions();
+            }
+        });
+
+        terminalInput.addEventListener('input', (e) => {
+            const input = e.target.value.trim();
+            if (input.length > 0) {
+                const suggestions = getSuggestions(input);
+                if (suggestions.length > 0) {
+                    showSuggestions(suggestions.slice(0, 8));
+                } else {
+                    hideSuggestions();
+                }
+            } else {
+                hideSuggestions();
             }
         });
 
         // Focus input on any click within the terminal
         terminalContainer.addEventListener('click', () => {
             terminalInput.focus();
+        });
+
+        // Mobile haptic feedback simulation
+        function vibrate(pattern = 50) {
+            if (navigator.vibrate) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        // Screen flicker effect
+        function screenFlicker() {
+            body.classList.add('flicker');
+            setTimeout(() => body.classList.remove('flicker'), 100);
+        }
+
+        // Touch events for mobile
+        if ('ontouchstart' in window) {
+            terminalContainer.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('suggestion')) {
+                    vibrate(30);
+                }
+            });
+            
+            terminalInput.addEventListener('touchstart', () => {
+                terminalInput.focus();
+            });
+        }
+
+        // Keyboard sound simulation
+        let soundEnabled = false;
+        function playKeySound() {
+            if (!soundEnabled) return;
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800 + Math.random() * 200;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Enhanced keyboard handling
+        document.addEventListener('keydown', (e) => {
+            if (e.target === terminalInput) {
+                if (e.key.length === 1) {
+                    playKeySound();
+                }
+                if (e.key === 'Enter') {
+                    vibrate(40);
+                    screenFlicker();
+                }
+            }
         });
 
         // --- Start ---

@@ -147,6 +147,7 @@ hr {
 .prompt-line {
     display: flex;
     align-items: center;
+    position: relative;
 }
 
 .prompt {
@@ -167,6 +168,37 @@ hr {
 
 #terminal-input:focus {
     outline: none;
+}
+
+.suggestions-container {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--background);
+    border: 1px solid var(--foreground);
+    border-bottom: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.suggestion {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: var(--foreground);
+    border-bottom: 1px solid #333;
+}
+
+.suggestion:hover,
+.suggestion.selected {
+    background: var(--foreground);
+    color: var(--background);
+}
+
+.suggestion:last-child {
+    border-bottom: none;
 }
 
 
@@ -229,18 +261,112 @@ body::after {
     display: none;
 }
 
-/* --- Themes --- */
-.theme-amber {
-    --foreground: #ffb800;
-    --shadow: #ffb800;
-}
-
-.theme-blue {
-    --foreground: #00bfff;
-    --shadow: #00bfff;
-}
-
-.theme-green {
+/* --- Theme --- */
+.theme-green,
+html.theme-green {
     --foreground: #00ff41;
     --shadow: #00ff41;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    body {
+        padding: 20px 10px;
+    }
+    
+    .suggestions-container {
+        max-height: 150px;
+        font-size: 14px;
+    }
+    
+    .suggestion {
+        padding: 8px 12px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+    }
+    
+    #terminal-input {
+        font-size: 16px;
+    }
+    
+    .prompt {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 15px 8px;
+    }
+    
+    h1 {
+        font-size: 24px;
+    }
+    
+    .nav {
+        font-size: 14px;
+    }
+    
+    .nav span {
+        margin: 0 5px;
+        display: inline-block;
+    }
+}
+
+/* Enhanced Visual Effects */
+.terminal-output p {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.prompt-line {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 1em;
+    background: var(--foreground);
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+/* Enhanced hover effects */
+.suggestion:hover {
+    transform: translateX(2px);
+    transition: all 0.1s ease;
+}
+
+/* Screen flicker effect */
+body.flicker {
+    animation: screenFlicker 0.1s;
+}
+
+@keyframes screenFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.95; }
+}
+
+/* Mobile touch improvements */
+@media (hover: none) {
+    .suggestion:hover {
+        transform: none;
+    }
+    
+    .suggestion:active {
+        background: var(--foreground);
+        color: var(--background);
+    }
 }
